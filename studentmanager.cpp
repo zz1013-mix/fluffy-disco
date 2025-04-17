@@ -1,16 +1,13 @@
 #include "studentmanager.h"
-#include <algorithm>
-#include <cmath>
-#include <fstream>
-#include <sstream>
 
+// ====================== 核心功能实现 ======================
 void StudentManager::addStudent(const Student& student) {
     students.push_back(student);
 }
 
 bool StudentManager::deleteStudentById(int id) {
-    auto it = std::remove_if(students.begin(), students.end(), [id](const Student& student) {
-        return student.getId() == id;
+    auto it = std::remove_if(students.begin(), students.end(), [id](const Student& s) {
+        return s.getId() == id;
     });
     if (it != students.end()) {
         students.erase(it, students.end());
@@ -31,7 +28,7 @@ Student* StudentManager::findStudentById(int id) {
 std::vector<Student*> StudentManager::findStudentsByName(const QString& namePart) {
     std::vector<Student*> results;
     for (auto& student : students) {
-        if (student.getName().contains(namePart, Qt::CaseInsensitive)) {
+        if (student.getName().contains(namePart, Qt::CaseInsensitive)) {  // 不区分大小写模糊匹配
             results.push_back(&student);
         }
     }
@@ -49,21 +46,38 @@ void StudentManager::modifyStudentScores(int id, double math, double physics, do
 
 void StudentManager::sortStudents() {
     std::sort(students.begin(), students.end(), [](const Student& a, const Student& b) {
-        if (a.getTotalScore() != b.getTotalScore())
+        // 主排序：总分降序
+        if (a.getTotalScore() != b.getTotalScore()) {
             return a.getTotalScore() > b.getTotalScore();
-        if (a.getMathScore() != b.getMathScore())
+        }
+        // 次排序：数学降序
+        if (a.getMathScore() != b.getMathScore()) {
             return a.getMathScore() > b.getMathScore();
-        if (a.getPhysicsScore() != b.getPhysicsScore())
+        }
+        // 第三排序：物理降序
+        if (a.getPhysicsScore() != b.getPhysicsScore()) {
             return a.getPhysicsScore() > b.getPhysicsScore();
+        }
+        // 最终排序：学号升序
         return a.getId() < b.getId();
     });
 }
 
+// ====================== 统计分析实现 ======================
 double StudentManager::calculateAverageScore(const QString& subject) const {
     if (students.empty()) return 0.0;
     double total = 0.0;
     for (const auto& student : students) {
         total += getScoreBySubject(student, subject);
+    }
+    return total / students.size();
+}
+
+double StudentManager::calculateAverageTotalScore() const {
+    if (students.empty()) return 0.0;
+    double total = 0.0;
+    for (const auto& student : students) {
+        total += student.getTotalScore();
     }
     return total / students.size();
 }
@@ -90,10 +104,12 @@ double StudentManager::calculatePassRate(const QString& subject) const {
     return static_cast<double>(passCount) / students.size() * 100;
 }
 
+// ====================== 文件操作实现 ======================
 void StudentManager::loadFromFile(const QString& filename) {
     students.clear();
     std::ifstream file(filename.toStdString());
     if (!file.is_open()) return;
+
     std::string line;
     while (std::getline(file, line)) {
         std::istringstream ss(line);
@@ -104,11 +120,13 @@ void StudentManager::loadFromFile(const QString& filename) {
             students.emplace_back(id, QString::fromStdString(name), math, physics, english);
         }
     }
+    file.close();
 }
 
 void StudentManager::saveToFile(const QString& filename) const {
     std::ofstream file(filename.toStdString());
     if (!file.is_open()) return;
+
     for (const auto& student : students) {
         file << student.getId() << " "
              << student.getName().toStdString() << " "
@@ -116,11 +134,13 @@ void StudentManager::saveToFile(const QString& filename) const {
              << student.getPhysicsScore() << " "
              << student.getEnglishScore() << "\n";
     }
+    file.close();
 }
 
+// 私有辅助函数：根据科目获取成绩
 double StudentManager::getScoreBySubject(const Student& student, const QString& subject) const {
     if (subject == "math") return student.getMathScore();
     if (subject == "physics") return student.getPhysicsScore();
     if (subject == "english") return student.getEnglishScore();
-    return 0.0;
+    return 0.0;  // 科目不存在时返回0
 }

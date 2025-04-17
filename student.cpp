@@ -24,7 +24,7 @@ double Student::getEnglishScore() const {
 }
 
 double Student::getTotalScore() const {
-    return mathScore + physicsScore + englishScore;
+    return mathScore + physicsScore + englishScore;  // 总分计算
 }
 
 void Student::setMathScore(double score) {
